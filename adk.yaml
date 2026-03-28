@@ -1,0 +1,86 @@
+name: visuallink
+version: "1.0"
+description: "VisualLink: Missing Person Reunification Hub — AI-powered family reconnection"
+
+# ── Base model ────────────────────────────────────────────────────────────────
+model:
+  provider: google
+  name: gemini-1.5-flash   # Override with gemini-1.5-pro for higher accuracy
+  parameters:
+    temperature: 0.1        # Low for deterministic JSON extraction
+    max_output_tokens: 4096
+
+# ── Agents ────────────────────────────────────────────────────────────────────
+agents:
+  orchestrator:
+    module: agents.orchestrator_agent
+    class:  OrchestratorAgent
+    is_root: true
+
+  ingestion:
+    module: agents.ingestion_agent
+    class:  IngestionAgent
+    capabilities:
+      - image_understanding
+      - json_extraction
+
+  feed_analysis:
+    module: agents.feed_analysis_agent
+    class:  FeedAnalysisAgent
+    capabilities:
+      - video_understanding
+      - json_extraction
+
+  matching:
+    module: agents.matching_agent
+    class:  MatchingAgent
+    capabilities:
+      - json_extraction
+      - structured_comparison
+
+  notification:
+    module: agents.notification_agent
+    class:  NotificationAgent
+    capabilities:
+      - gmail
+      - google_calendar
+      - google_sheets
+
+# ── Tools / integrations ──────────────────────────────────────────────────────
+tools:
+  google_workspace:
+    gmail:          true
+    calendar:       true
+    sheets:         true
+    auth_type:      service_account
+    scopes:
+      - https://www.googleapis.com/auth/gmail.send
+      - https://www.googleapis.com/auth/calendar
+      - https://www.googleapis.com/auth/spreadsheets
+
+  google_cloud:
+    firestore:      true
+    cloud_storage:  true
+
+# ── Storage ───────────────────────────────────────────────────────────────────
+storage:
+  primary_db:   firestore
+  file_storage: gcs
+
+  collections:
+    missing_persons:   "missing_persons/{case_id}"
+    shelter_sightings: "shelter_sightings/{feed_id}/sightings/{sighting_id}"
+    matches:           "matches/{match_id}"
+
+# ── Pipeline configuration ────────────────────────────────────────────────────
+pipeline:
+  match_confidence_threshold: 0.75
+  video_chunk_seconds:        30
+  video_sample_fps:           1
+  max_video_size_mb:          500
+  image_min_dimension_px:     256
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging:
+  level: INFO
+  structured: true
